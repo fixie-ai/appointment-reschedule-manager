@@ -20,7 +20,13 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
-    "noUncheckedSideEffectImports": true
+    "noUncheckedSideEffectImports": true,
+
+    "typeRoots": [
+      "./node_modules/.pnpm/@types",
+      "./node_modules/@types"
+    ],
+    "types": ["node", "react", "react-dom"]
   },
   "include": ["src"]
 }

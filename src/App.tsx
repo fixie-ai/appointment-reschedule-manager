@@ -1,72 +1,22 @@
 import { useEffect, useRef, useState } from "react";
-import "./App.css";
-import { Transcript, UltravoxSession, UltravoxSessionStatus, } from "ultravox-client";
-import { checkDateAvailability } from "./date-checker";
-import { STATES, getAvailableActions, initializeStateMachine, transition } from "./state/appointmentStateMachine";
-import { getTemplate } from "./state/appointmentTemplates";
-import { getSystemPrompt, getInstructionsFromTemplate } from "./state/appointmentSystemPrompt";
-import { AppointmentDetails, CallState } from "./state/types";
+import { UltravoxSessionStatus } from "ultravox-client";
+import { checkDateAvailability } from "./utils/date-checker";
+import { getAvailableActions, initializeStateMachine, transition } from "./config/stateMachine";
+import { STATES } from "./config/stateDefinitions";
+import { getTemplate } from "./config/templates";
+import { getSystemPrompt, getInstructionsFromTemplate } from "./config/systemPrompt";
+import { AppointmentDetails, CallState } from "./config/types";
+import { useUltravoxSession } from "./hooks/useUltravoxSession";
 import StateMachineVisualization from "./components/StateMachineVisualization";
-import "./components/StateMachineVisualization.css";
-
-function useUltravoxSession(joinURL: string | undefined, muted: boolean) {
-  const [session, setSession] = useState<UltravoxSession | null>(null);
-  const [status, setStatus] = useState<UltravoxSessionStatus>(
-    UltravoxSessionStatus.IDLE
-  );
-  const [transcript, setTranscript] = useState<Transcript[]>([]);
-
-  useEffect(() => {
-    if (!joinURL) {
-      return;
-    }
-
-    const session = new UltravoxSession();
-    setSession(session);
-    setTranscript([]);
-
-    // Expose session status changes
-    const handleStatusChange = () => {
-      setStatus(session.status);
-    };
-    session.addEventListener("status", handleStatusChange);
-
-    // Expose transcripts
-    const handleTranscriptChange = () => {
-      setTranscript(session.transcripts.slice());
-    };
-    session.addEventListener("transcripts", handleTranscriptChange);
-    session.joinCall(joinURL, "uv_console");
-
-    return () => {
-      session.removeEventListener("status", handleStatusChange);
-      session.removeEventListener("transcript", handleTranscriptChange);
-      setStatus(UltravoxSessionStatus.IDLE);
-      setSession(null);
-      session.leaveCall();
-    };
-  }, [joinURL]);
-
-  useEffect(() => {
-    if (
-      session &&
-      status !== UltravoxSessionStatus.DISCONNECTED &&
-      status !== UltravoxSessionStatus.CONNECTING
-    ) {
-      if (muted) {
-        session.muteMic();
-      } else {
-        session.unmuteMic();
-      }
-    }
-  }, [session, status, muted]);
-
-  return { session, status, transcript };
-}
+import TranscriptDisplay from "./components/TranscriptDisplay";
+import DebugPanel from "./components/DebugPanel";
+import CallControls from "./components/CallControls";
+import CallStatus from "./components/CallStatus";
 
 // Sample appointment details - in a real app, this would come from a database or API
 const appointmentDetails: AppointmentDetails = {
   client_name: "Steve Jackson",
+  client_first: "Steve",
   company_name: "Medical Depot",
   appointment_date: "April 15, 2025",
   appointment_time: "2:30 PM",
@@ -112,7 +62,7 @@ async function createUltravoxCall(
         {
           temporaryTool: {
             modelToolName: "updateState",
-            description: "Updates the current state and call data",
+            description: "Updates the current state and call data. Only use actions that are valid for the current state.",
             client: {},
             dynamicParameters: [
               {
@@ -120,7 +70,8 @@ async function createUltravoxCall(
                 location: "PARAMETER_LOCATION_BODY",
                 schema: {
                   type: "string",
-                  description: "The action to perform in the current state.",
+                  enum: ['start_call', 'confirm_identity', 'wrong_number', 'can_attend', 'cannot_attend', 'offer_alternatives', 'can_reschedule', 'cannot_reschedule', 'confirm_reschedule', 'cancel_appointment', 'end_call'],
+                  description: "The action to perform in the current state. IMPORTANT: Only use actions that are valid for the current state. For example, in 'reschedule_offering' state, you can only use 'offer_alternatives'.",
                 },
               },
               {
@@ -167,7 +118,11 @@ async function createUltravoxCall(
   return joinUrl;
 }
 
-function TextInput({ onSubmit }: { onSubmit: (text: string) => void }) {
+interface TextInputProps {
+  onSubmit: (text: string) => void;
+}
+
+const TextInput: React.FC<TextInputProps> = ({ onSubmit }) => {
   const [text, setText] = useState<string>("");
 
   const clearAndSubmit = () => {
@@ -178,16 +133,16 @@ function TextInput({ onSubmit }: { onSubmit: (text: string) => void }) {
   };
 
   return (
-    <div className="text-input-container">
+    <div className="mx-auto my-8 w-3xl flex gap-2 p-4 bg-slate-50 rounded-lg shadow-sm border border-slate-200">
       <input
-        className="text-input-field"
+        className="flex-1 px-4 py-3 text-base border border-slate-300 rounded bg-white text-slate-700 transition focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
         placeholder="Type your message here..."
         value={text}
         onChange={(e) => setText(e.target.value)}
         onKeyDown={(e) => e.key === "Enter" && text && clearAndSubmit()}
       />
       <button 
-        className="text-input-button"
+        className={`px-6 py-3 bg-blue-500 text-white border-none rounded font-medium cursor-pointer transition-colors hover:bg-blue-600 ${!text && 'bg-slate-400 cursor-not-allowed hover:bg-slate-400'}`}
         onClick={() => text && clearAndSubmit()}
         disabled={!text}
       >
@@ -195,7 +150,7 @@ function TextInput({ onSubmit }: { onSubmit: (text: string) => void }) {
       </button>
     </div>
   );
-} 
+}
 
 function App() {
   const [joinURL, setJoinURL] = useState<string | undefined>(undefined);
@@ -232,6 +187,12 @@ function App() {
           // Get the current state from the ref for the latest value
           const currentCallState = callStateRef.current;
           
+          // Validate that the action is valid for the current state
+          const validActions = getAvailableActions(currentCallState.currentState);
+          if (!validActions.includes(params.action)) {
+            return `Error: The action "${params.action}" is not valid in the current state "${currentCallState.currentState}". Valid actions are: ${validActions.join(", ")}`;
+          }
+          
           // Apply the state transition
           const newCallState = transition(
             currentCallState.currentState, 
@@ -260,7 +221,10 @@ function App() {
           return getInstructionsFromTemplate(templateText);
         } catch (error) {
           console.error("Error updating state:", error);
-          return "Error updating state. Please try a different action.";
+          // Provide more helpful error message
+          const currentCallState = callStateRef.current;
+          const validActions = getAvailableActions(currentCallState.currentState);
+          return `Error updating state. The action "${params.action}" is not valid in state "${currentCallState.currentState}". Valid actions are: ${validActions.join(", ")}`;
         }
       }
     );
@@ -334,48 +298,38 @@ function App() {
     }
   };
 
-  return (
-    <div className="app-container">
-      <header className="app-header">
-        <h1>Appointment Confirmation Call</h1>
-        <div className="call-status">
-          {status && <span>Call Status: {status}</span>}
-        </div>
-      </header>
+  // Function to end the call
+  const handleEndCall = () => {
+    setJoinURL(undefined);
+  };
 
-      <main className="app-main">
-        {/* Call Controls */}
-        {!session ||
-        status === UltravoxSessionStatus.IDLE ||
-        status === UltravoxSessionStatus.DISCONNECTED ? (
-          <div className="call-controls">
-            <button 
-              onClick={startNewCall} 
-              disabled={isStartingCall}
-              className="start-call-btn"
-            >
-              {isStartingCall ? "Starting Call..." : "Start Call"}
-            </button>
-          </div>
-        ) : (
-          <div className="active-call-controls">
-            <button onClick={handleWrapUp} className="wrap-up-btn">
-              Wrap Up Call
-            </button>
-            <button onClick={() => setJoinURL(undefined)} className="end-call-btn">
-              End Call
-            </button>
-          </div>
-        )}
+  return (
+    <div className="w-full mx-auto p-8 text-center">
+      <header className="mb-8 pb-4 border-b border-slate-200">
+        <h1 className="text-white mb-2">Appointment Confirmation Call</h1>
+        <h2 className="font-mono">Ultravox example using inline instructions and call state management.</h2>
+      </header>
+      <main className="flex flex-col gap-8">
+        <div className="flex flex-row justify-between">
+          {/* Call Controls Component */}
+          <CallControls 
+            session={session}
+            status={status}
+            isStartingCall={isStartingCall}
+            onStartCall={startNewCall}
+            onWrapUpCall={handleWrapUp}
+            onEndCall={handleEndCall}
+          />
+          <CallStatus status={status} />
+        </div>
 
         {/* State Machine Visualization Component */}
-        {session && (
-          <StateMachineVisualization 
-            callState={callState}
-            availableActions={availableActions}
-            onActionClick={performAction}
-          />
-        )}
+        <StateMachineVisualization 
+          callState={callState}
+          availableActions={availableActions}
+          onActionClick={performAction}
+        />
+
         {/* Text Input for active calls */}
         {session && status !== UltravoxSessionStatus.IDLE && status !== UltravoxSessionStatus.DISCONNECTED && (
           <TextInput
@@ -388,40 +342,13 @@ function App() {
             }
           />
         )}
+  
+        {/* Transcript Display Component */}
+        <TranscriptDisplay transcript={transcript} />
 
-        {/* Transcript Display */}
-        <div className="transcript-container">
-          <h2>Conversation Transcript</h2>
-          <div className="transcript-messages">
-            {transcript.map((t, i) => (
-              <div
-                key={i}
-                className={`transcript-message ${t.speaker === "You" ? "user-message" : "ai-message"}`}
-              >
-                <strong>{t.speaker}:</strong> {t.text}
-              </div>
-            ))}
-            {transcript.length === 0 && (
-              <div className="no-transcript">
-                No conversation yet. Start a call to begin.
-              </div>
-            )}
-          </div>
-        </div>
+        {/* Debug Panel Component */}
+        <DebugPanel callState={callState} visible={!!session} />
       </main>
-
-      {/* Debug panel */}
-      {session && (
-        <div className="debug-panel">
-          <h3>Debug Data</h3>
-          <details>
-            <summary>Call Data</summary>
-            <pre>
-              {JSON.stringify(callState.callData, null, 2)}
-            </pre>
-          </details>
-        </div>
-      )}
     </div>
   );
 }

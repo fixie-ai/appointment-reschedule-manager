@@ -1,6 +1,6 @@
-// src/state/appointmentTemplates.ts
+// src/state/templates.ts
 
-import { STATES, ACTIONS } from './appointmentStateMachine';
+import { STATES, ACTIONS } from './stateDefinitions';
 import { TemplateFunction } from './types';
 
 // Templates for each state
@@ -15,27 +15,23 @@ const templates: Record<string, TemplateFunction> = {
   
   [STATES.IDENTITY_CHECKING]: (data) => `
     You have just made an outbound phone call. Say something like:
-    "Hi, is ${data.details.client_name} or their representative available?"
+    "Hi, I am a virtual assistant calling from ${data.details.company_name}. Is ${data.details.client_name} available?"
     
     If they aren't ${data.details.client_name} and don't 
     know who ${data.details.client_name} is, apologize for the confusion, 
     thank them for their time, and select "${ACTIONS.WRONG_NUMBER}".
     
-    If they say they are ${data.details.client_name} or their representative, introduce yourself by saying: 
-    "Hi, I'm calling to confirm ${data.details.client_name}'s upcoming appointment 
-    scheduled for ${data.details.appointment_date} at ${data.details.appointment_time}. 
-    Is that still going to work for you?"
-    
-    Then select "${ACTIONS.CONFIRM_IDENTITY}".
+    If they say they are ${data.details.client_name}, select "${ACTIONS.CONFIRM_IDENTITY}".
   `,
   
   [STATES.ATTENDANCE_CHECKING]: (data) => `
-    Find out if ${data.details.client_name} can attend the scheduled appointment 
-    on ${data.details.appointment_date} at ${data.details.appointment_time}.
+    Say something like: "Hi ${data.details.client_first}, I'm calling to confirm your upcoming appointment 
+    scheduled for ${data.details.appointment_date} at ${data.details.appointment_time}.
+    Is that still going to work for you?"
     
     If they confirm they can attend, express that you're looking forward to 
     seeing them. Say something like:
-    "Great! We're looking forward to seeing ${data.details.client_name} on 
+    "Great! We're looking forward to seeing you on 
     ${data.details.appointment_date} at ${data.details.appointment_time}. Have a wonderful day!"
     
     Then select "${ACTIONS.CAN_ATTEND}".
@@ -44,7 +40,7 @@ const templates: Record<string, TemplateFunction> = {
   `,
   
   [STATES.APPOINTMENT_CONFIRMED]: (data) => `
-    We're all set! ${data.details.client_name} is confirmed for their appointment on 
+    We're all set! You are confirmed for your appointment on 
     ${data.details.appointment_date} at ${data.details.appointment_time}.
     
     Thank them for their time and select "${ACTIONS.END_CALL}" to end the call.
@@ -60,6 +56,9 @@ const templates: Record<string, TemplateFunction> = {
     - ${data.details.alt_date_2} at ${data.details.alt_time_2}
     
     After offering these alternatives, select "${ACTIONS.OFFER_ALTERNATIVES}".
+    
+    NOTE: The only valid action in this state is "${ACTIONS.OFFER_ALTERNATIVES}". 
+    You cannot use "${ACTIONS.CANNOT_RESCHEDULE}" or "${ACTIONS.CAN_RESCHEDULE}" or "${ACTIONS.CONFIRM_RESCHEDULE}" directly from this state.
   `,
   
   [STATES.RESCHEDULE_CHECKING]: (data) => `
@@ -74,20 +73,20 @@ const templates: Record<string, TemplateFunction> = {
   
   [STATES.RESCHEDULE_CONFIRMED]: (data) => `
     Confirm their selection by saying something like:
-    "Great! I've rescheduled ${data.details.client_name}'s appointment for 
+    "Great! I've rescheduled your appointment for 
     ${data.callData.rescheduled_date} at ${data.callData.rescheduled_time}. 
-    We look forward to seeing ${data.details.client_name} then. 
+    We look forward to seeing you then, ${data.details.client_first}. 
     Is there anything else I can help you with today?"
     
     Address any additional questions they might have, then thank them for their time
     and select "${ACTIONS.END_CALL}".
   `,
   
-  [STATES.APPOINTMENT_CANCELLED]: (data) => `
+  [STATES.APPOINTMENT_CANCELLED]: () => `
     Let them know you'll cancel the current appointment by saying something like:
-    "I understand. I'll cancel ${data.details.client_name}'s appointment for now. 
+    "I understand. I'll cancel the appointment for now. 
     Please feel free to reach out to us in the future when you'd like to reschedule. 
-    Thank you for letting us know, and we hope to see ${data.details.client_name} soon!"
+    Thank you for letting us know, and we hope to see you soon!"
     
     Select "${ACTIONS.END_CALL}" to end the call.
   `,

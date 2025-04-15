@@ -1,6 +1,6 @@
 import React from 'react';
-import { STATES, ACTIONS } from '../state/appointmentStateMachine';
-import { CallState } from '../state/types';
+import { STATE_DESCRIPTIONS, ACTION_DESCRIPTIONS, STATE_TRANSITIONS, STATE_ORDER } from '../config/stateDefinitions';
+import { CallState } from '../config/types';
 
 interface StateMachineVisualizationProps {
   callState: CallState;
@@ -8,148 +8,115 @@ interface StateMachineVisualizationProps {
   onActionClick?: (action: string) => void;
 }
 
-// Define state descriptions for UI display
-const STATE_DESCRIPTIONS: Record<string, string> = {
-  [STATES.INITIAL]: "Preparing to start the appointment confirmation call",
-  [STATES.IDENTITY_CHECKING]: "Verifying the identity of the person answering the call",
-  [STATES.ATTENDANCE_CHECKING]: "Confirming if the client can attend the scheduled appointment",
-  [STATES.APPOINTMENT_CONFIRMED]: "The appointment has been confirmed for the original time",
-  [STATES.RESCHEDULE_OFFERING]: "Offering alternative appointment times",
-  [STATES.RESCHEDULE_CHECKING]: "Confirming if any of the alternative times work for the client",
-  [STATES.RESCHEDULE_CONFIRMED]: "The appointment has been rescheduled for a new time",
-  [STATES.APPOINTMENT_CANCELLED]: "The appointment has been cancelled",
-  [STATES.CALL_ENDED]: "The call has been completed"
-};
-
-// Define action descriptions for UI display
-const ACTION_DESCRIPTIONS: Record<string, string> = {
-  [ACTIONS.START_CALL]: "Initiate the outbound call",
-  [ACTIONS.CONFIRM_IDENTITY]: "Confirm you're speaking with the client or their representative",
-  [ACTIONS.WRONG_NUMBER]: "The person is not the client and doesn't know them",
-  [ACTIONS.CAN_ATTEND]: "The client can attend the scheduled appointment",
-  [ACTIONS.CANNOT_ATTEND]: "The client cannot attend the scheduled appointment",
-  [ACTIONS.OFFER_ALTERNATIVES]: "Offer alternative appointment times",
-  [ACTIONS.CAN_RESCHEDULE]: "The client can make one of the alternative times",
-  [ACTIONS.CANNOT_RESCHEDULE]: "The client cannot make any of the alternative times",
-  [ACTIONS.CONFIRM_RESCHEDULE]: "Confirm the rescheduled appointment time",
-  [ACTIONS.CANCEL_APPOINTMENT]: "Cancel the appointment completely",
-  [ACTIONS.END_CALL]: "End the call"
-};
-
-// Define the transitions for visualization purposes
-const STATE_TRANSITIONS: Record<string, string[]> = {
-  [STATES.INITIAL]: [STATES.IDENTITY_CHECKING],
-  [STATES.IDENTITY_CHECKING]: [STATES.ATTENDANCE_CHECKING, STATES.CALL_ENDED],
-  [STATES.ATTENDANCE_CHECKING]: [STATES.APPOINTMENT_CONFIRMED, STATES.RESCHEDULE_OFFERING],
-  [STATES.APPOINTMENT_CONFIRMED]: [STATES.CALL_ENDED],
-  [STATES.RESCHEDULE_OFFERING]: [STATES.RESCHEDULE_CHECKING],
-  [STATES.RESCHEDULE_CHECKING]: [STATES.RESCHEDULE_CONFIRMED, STATES.APPOINTMENT_CANCELLED],
-  [STATES.RESCHEDULE_CONFIRMED]: [STATES.CALL_ENDED],
-  [STATES.APPOINTMENT_CANCELLED]: [STATES.CALL_ENDED],
-  [STATES.CALL_ENDED]: []
-};
-
-// Order states for visual display
-const STATE_ORDER = [
-  STATES.INITIAL,
-  STATES.IDENTITY_CHECKING,
-  STATES.ATTENDANCE_CHECKING,
-  STATES.APPOINTMENT_CONFIRMED,
-  STATES.RESCHEDULE_OFFERING,
-  STATES.RESCHEDULE_CHECKING,
-  STATES.RESCHEDULE_CONFIRMED,
-  STATES.APPOINTMENT_CANCELLED,
-  STATES.CALL_ENDED
-];
-
 const StateMachineVisualization: React.FC<StateMachineVisualizationProps> = ({
   callState,
   availableActions,
   onActionClick
 }) => {
-  const { currentState, previousState } = callState;
+  const { currentState } = callState;
   
-  // Helper function to get state status class
-  const getStateStatusClass = (state: string) => {
-    if (state === currentState) return "current";
-    if (callState.previousState && state === callState.previousState) return "previous";
-    if (callState.callData.stateHistory?.includes(state)) return "visited";
+  const getStateNodeStyles = (state: string) => {
+    // Base styles for all state nodes
+    const baseStyles = "p-1 rounded-md w-60 text-lg border-2 transition-all duration-300 px-4";
+    
+    if (state === currentState) {
+      return `${baseStyles} border-blue-500 bg-blue-50 shadow-blue-500/30 shadow-sm font-semibold text-blue-800`;
+    }
+    if (callState.previousState && state === callState.previousState) {
+      return `${baseStyles} border-green-300 bg-green-50 text-green-800`;
+    }
+    if (callState.callData.stateHistory?.includes(state)) {
+      return `${baseStyles} border-green-300 bg-green-50 opacity-80 text-green-800`;
+    }
     
     // Check if this state is a possible next state based on the state machine transitions
     const transitions = STATE_TRANSITIONS[currentState] || [];
-    if (transitions.includes(state)) return "next-possible";
+    if (transitions.includes(state)) {
+      return `${baseStyles} border-amber-300 bg-amber-50 text-amber-800`;
+    }
     
-    return "future";
+    return `${baseStyles} border-slate-300 bg-slate-50 opacity-60 text-slate-500`;
+  };
+
+  const getConnectorStyles = (state: string) => {
+    const baseStyles = "h-4 w-0.5 ml-8 my-2";
+    
+    if (state === currentState || 
+        (callState.previousState && state === callState.previousState) || 
+        callState.callData.stateHistory?.includes(state)) {
+      return `${baseStyles} bg-green-300`;
+    }
+    
+    return `${baseStyles} bg-slate-300`;
+  };
+
+  const isStateActiveOrCompleted = (state: string) => {
+    return state === currentState || 
+           callState.callData.stateHistory?.includes(state);
   };
 
   return (
-    <div className="state-machine-visualization">
-      <h2>Call Flow Progress</h2>
-      
-      {/* State Flow Diagram - Left Column */}
-      <div className="state-flow-diagram">
-        {STATE_ORDER.map((state) => (
-          <div 
-            key={state}
-            className={`state-node ${getStateStatusClass(state)}`}
-          >
-            <div className="state-node-content">
-              <span className="state-node-name">{state.replace(/_/g, ' ')}</span>
-              {state === currentState && (
-                <span className="state-node-marker">●</span>
-              )}
-            </div>
-            {state !== STATE_ORDER[STATE_ORDER.length - 1] && (
-              <div className="state-connector"></div>
-            )}
-          </div>
-        ))}
-      </div>
-      
-      {/* Current State Display - Middle Column */}
-      <div className="current-state-display">
-        <h3>Current State</h3>
-        <div className="current-state-box">
-          <span className="state-name">{currentState.replace(/_/g, ' ')}</span>
-          <p className="state-description">{STATE_DESCRIPTIONS[currentState]}</p>
-        </div>
-        
-        {/* State History */}
-        <div className="state-history">
-          <h3>Call Progress</h3>
-          <ol className="state-history-list">
-            {(callState.callData.stateHistory || []).map((historyState, index) => (
-              <li key={index} className="state-history-item">
-                <span className="history-state-name">{historyState.replace(/_/g, ' ')}</span>
-              </li>
-            ))}
-            <li className="state-history-item current">
-              <span className="history-state-name">{currentState.replace(/_/g, ' ')}</span>
-            </li>
-          </ol>
-        </div>
-      </div>
-      
-      {/* Available Actions - Right Column */}
-      <div className="available-actions">
-        <h3>Available Actions</h3>
-        {availableActions.length === 0 ? (
-          <p className="no-actions">No actions available in current state</p>
-        ) : (
-          <div className="action-buttons">
-            {availableActions.map((action) => (
-              <div key={action} className="action-button-container">
-                <button
-                  className="action-button"
-                  onClick={() => onActionClick && onActionClick(action)}
-                >
-                  {action.replace(/_/g, ' ')}
-                </button>
-                <span className="action-description">{ACTION_DESCRIPTIONS[action]}</span>
+    <div className="w-4xl mx-auto my-5 p-5 bg-slate-50 rounded-lg shadow-md gap-5 font-sans">
+      <h2 className="text-center mb-5 text-slate-800 border-b-2 border-slate-200 pb-2.5 font-semibold text-xl">Call Flow Progress</h2>
+      <div className="flex flex-col">
+        <div className="grid grid-col">
+          {/* State Flow Diagram */}
+          <div className="flex flex-col gap-2 my-6">
+            {STATE_ORDER.map((state, index) => (
+              <div key={state} className="flex flex-col mb-2">
+                <div className="flex items-start gap-3">
+                  {/* State node */}
+                  <div className={getStateNodeStyles(state)}>
+                    <div className="flex justify-between">
+                      <span className="">{state}</span>
+                      {state === currentState && (
+                        <span className="text-blue-500 text-sm">●</span>
+                      )}
+                    </div>
+                  </div>
+                  
+                  {/* Context information that appears beside the node */}
+                  {isStateActiveOrCompleted(state) && (
+                    <div className="text-base flex-1">
+                      {/* Show state description for completed or current states */}
+                      <div className="bg-white p-2 rounded border border-slate-200 shadow-sm mb-1">
+                        <p className="text-slate-600">{STATE_DESCRIPTIONS[state]}</p>
+                      </div>
+                      
+                      {/* Show available actions for current state */}
+                      {state === currentState && availableActions.length > 0 && (
+                        <div className="flex flex-col gap-1 mt-2">
+                          <span className="font-semibold text-slate-700">Available Actions:</span>
+                          <div className="flex flex-wrap gap-1">
+                            {availableActions.map((action) => (
+                              <div className="flex flex-row justify-between">
+                                <button
+                                  key={action}
+                                  className="w-48 px-2 py-1 bg-blue-500 text-white border-none rounded cursor-pointer font-medium text-xs transition-colors hover:bg-blue-600 active:bg-blue-700"
+                                  onClick={() => onActionClick && onActionClick(action)}
+                                >
+                                  {action}
+                                </button>
+                                <span className="mt-1.5 text-sm text-slate-500 px-1">{ACTION_DESCRIPTIONS[action]}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+                
+                {/* Connector between states */}
+                {index < STATE_ORDER.length - 1 && (
+                  <div className="flex items-center">
+                    <div className={getConnectorStyles(state)}></div>
+                  </div>
+                )}
               </div>
             ))}
           </div>
-        )}
+        </div>
       </div>
     </div>
   );
