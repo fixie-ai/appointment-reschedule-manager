@@ -28,7 +28,8 @@ The application uses a state machine and provides a visualizer of the states and
 
 ## Run
 1. Start the app with `pnpm dev`
-1. Start a call by clicking on the "Start Call" button. Note: This is creating an outbound call so you need to answer the call before the agent will speak.
+1. Start a call by clicking on the "Start Call" button.
+* Note: This is creating an outbound call so you need to answer the call before the agent will speak.
 1. You can provide additional instructions to the agent during the call by clicking the "Wrap Up Call" button or by entering a message in the text box that appears above the conversation transcript.
 * The wrap up call button sends a hard coded instruction to the agent to wrap up the call.
 * You can also click on the available actions for the various call states and see how those trigger messages to the agent.
