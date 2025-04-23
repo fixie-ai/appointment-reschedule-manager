@@ -1,36 +1,6 @@
-// src/state/systemPrompt.ts
+// src/config/systemPrompt.ts
 
 import { AppointmentDetails } from './types';
-import { STATES, STATE_MACHINE } from './stateDefinitions';
-
-// Helper to generate a state machine diagram for the system prompt
-function generateStateMachineDescription(): string {
-  let description = "### State Machine Workflow ###\n\n";
-  description += "You must follow this exact call flow with these states and transitions:\n\n";
-  
-  // List all states
-  description += "States:\n";
-  Object.values(STATES).forEach(state => {
-    description += `- ${state}\n`;
-  });
-  
-  description += "\nTransitions (valid actions for each state):\n";
-  
-  // List valid transitions for each state
-  Object.entries(STATE_MACHINE).forEach(([state, transitions]) => {
-    description += `- From state '${state}', you can only use these actions:\n`;
-    
-    if (Object.keys(transitions).length === 0) {
-      description += `  - None (terminal state)\n`;
-    } else {
-      Object.entries(transitions).forEach(([action, nextState]) => {
-        description += `  - '${action}' → moves to '${nextState}'\n`;
-      });
-    }
-  });
-  
-  return description;
-}
 
 export function getSystemPrompt(details: AppointmentDetails): string {
   const companyName = details.company_name || 'Acme Appointments';
@@ -56,8 +26,6 @@ export function getSystemPrompt(details: AppointmentDetails): string {
 
     As the conversation progresses you'll follow a specific call flow and receive updates on your current state.
 
-    ${generateStateMachineDescription()}
-
     ### Important Rules ###
 
     1. You MUST only use actions that are valid for your current state.
@@ -69,7 +37,7 @@ export function getSystemPrompt(details: AppointmentDetails): string {
   return basePrompt;
 }
 
-// Instructions for AI based on current state
+// Instructions for the agent based on current state
 export function getInstructionsFromTemplate(templateText: string): string {
   return `<instruction>${templateText}</instruction>`;
 }

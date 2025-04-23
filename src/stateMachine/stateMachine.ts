@@ -1,7 +1,6 @@
-// src/state/appointmentStateMachine.ts
-
-import { CallState, CallData } from './types';
-import { STATES, STATE_MACHINE } from './stateDefinitions';
+import { STATE_MACHINE } from './stateMachineBuilder';
+import { STATES } from '../config';
+import { CallState, CallData } from '../config/types';
 
 // Function to transition between states
 export function transition(currentState: string, action: string, callData: CallData): CallState {

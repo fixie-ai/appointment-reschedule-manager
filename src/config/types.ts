@@ -1,5 +1,3 @@
-// src/state/types.ts
-
 // Appointment details that are passed in at call creation
 export interface AppointmentDetails {
   client_name: string;

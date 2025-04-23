@@ -21,9 +21,9 @@ The application uses a state machine and provides a visualizer of the states and
   ```
 
 ## Additional Configuration
-1. System Prompt → This is defined in `/config/systemPrompt.ts`
-1. Call State Messages → Defined in `/config/templates.ts`
-1. Call State → Defined in `/config/stateDefinitions.ts`
+1. System Prompt → Defined in `src/config/systemPrompt.ts`
+1. Call State → Defined in `src/config/index.ts`
+1. Individual Call State Templates → Defined in `src/config/`. These are used in `index.ts`
 
 
 ## Run

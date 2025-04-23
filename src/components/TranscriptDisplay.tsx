@@ -8,7 +8,7 @@ interface TranscriptDisplayProps {
 const TranscriptDisplay: React.FC<TranscriptDisplayProps> = ({ transcript }) => {
   return (
     <div className="w-4xl mx-auto text-left p-4 bg-slate-50 rounded-lg shadow-sm">
-      <h2 className="text-slate-800 text-xl mb-4 pb-2 border-b border-slate-200">Conversation Transcript</h2>
+      <h2 className="text-slate-800 text-2xl font-semibold mb-4 pb-2 border-b border-slate-200">Conversation Transcript</h2>
       <div className="flex flex-col gap-4 max-h-96 overflow-y-auto p-2">
         {transcript.map((t, i) => (
           <div
