@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { UltravoxSessionStatus } from "ultravox-client";
 import { checkDateAvailability } from "./utils/date-checker";
-import { getAvailableActions, initializeStateMachine, transition } from "./config/stateMachine";
-import { STATES } from "./config/stateDefinitions";
-import { getTemplate } from "./config/templates";
+import { getAvailableActions, initializeStateMachine, transition } from "./stateMachine/stateMachine";
+import { STATES, ACTION_DESCRIPTIONS } from "./config";
+import { getTemplate } from "./stateMachine/stateMachineBuilder";
 import { getSystemPrompt, getInstructionsFromTemplate } from "./config/systemPrompt";
 import { AppointmentDetails, CallState } from "./config/types";
 import { useUltravoxSession } from "./hooks/useUltravoxSession";
@@ -12,6 +12,7 @@ import TranscriptDisplay from "./components/TranscriptDisplay";
 import DebugPanel from "./components/DebugPanel";
 import CallControls from "./components/CallControls";
 import CallStatus from "./components/CallStatus";
+import AppHeader from "./components/AppHeader";
 
 // Sample appointment details - in a real app, this would come from a database or API
 const appointmentDetails: AppointmentDetails = {
@@ -27,6 +28,7 @@ const appointmentDetails: AppointmentDetails = {
 };
 
 // Function to create and start a new Ultravox call
+// Note: This should be done server-side in any production deployment
 async function createUltravoxCall(
   details: AppointmentDetails, 
   initialCallState: CallState
@@ -70,8 +72,8 @@ async function createUltravoxCall(
                 location: "PARAMETER_LOCATION_BODY",
                 schema: {
                   type: "string",
-                  enum: ['start_call', 'confirm_identity', 'wrong_number', 'can_attend', 'cannot_attend', 'offer_alternatives', 'can_reschedule', 'cannot_reschedule', 'confirm_reschedule', 'cancel_appointment', 'end_call'],
-                  description: "The action to perform in the current state. IMPORTANT: Only use actions that are valid for the current state. For example, in 'reschedule_offering' state, you can only use 'offer_alternatives'.",
+                  enum: Object.keys(ACTION_DESCRIPTIONS),
+                  description: "The action to perform in the current state. IMPORTANT: Only use actions that are valid for the current state. For example, in 'reschedule_offering' state, you can only use 'new_date_confirmed' or 'cancel_appointment'.",
                 },
               },
               {
@@ -117,14 +119,12 @@ async function createUltravoxCall(
   const { joinUrl } = await response.json();
   return joinUrl;
 }
-
 interface TextInputProps {
   onSubmit: (text: string) => void;
 }
 
 const TextInput: React.FC<TextInputProps> = ({ onSubmit }) => {
   const [text, setText] = useState<string>("");
-
   const clearAndSubmit = () => {
     if (text) {
       onSubmit(text);
@@ -191,7 +191,7 @@ function App() {
           const validActions = getAvailableActions(currentCallState.currentState);
           if (!validActions.includes(params.action)) {
             return `Error: The action "${params.action}" is not valid in the current state "${currentCallState.currentState}". Valid actions are: ${validActions.join(", ")}`;
-          }
+          }          
           
           // Apply the state transition
           const newCallState = transition(
@@ -305,10 +305,7 @@ function App() {
 
   return (
     <div className="w-full mx-auto p-8 text-center">
-      <header className="mb-8 pb-4 border-b border-slate-200">
-        <h1 className="text-white mb-2">Appointment Confirmation Call</h1>
-        <h2 className="font-mono">Ultravox example using inline instructions and call state management.</h2>
-      </header>
+      <AppHeader />
       <main className="flex flex-col gap-8">
         <div className="flex flex-row justify-between">
           {/* Call Controls Component */}

@@ -1,5 +1,6 @@
 import React from 'react';
-import { STATE_DESCRIPTIONS, ACTION_DESCRIPTIONS, STATE_TRANSITIONS, STATE_ORDER } from '../config/stateDefinitions';
+import { STATE_DESCRIPTIONS, ACTION_DESCRIPTIONS, STATE_ORDER } from '../config';
+import { STATE_TRANSITIONS } from '../stateMachine/stateMachineBuilder';
 import { CallState } from '../config/types';
 
 interface StateMachineVisualizationProps {
@@ -16,7 +17,6 @@ const StateMachineVisualization: React.FC<StateMachineVisualizationProps> = ({
   const { currentState } = callState;
   
   const getStateNodeStyles = (state: string) => {
-    // Base styles for all state nodes
     const baseStyles = "p-1 rounded-md w-60 text-lg border-2 transition-all duration-300 px-4";
     
     if (state === currentState) {
@@ -39,7 +39,7 @@ const StateMachineVisualization: React.FC<StateMachineVisualizationProps> = ({
   };
 
   const getConnectorStyles = (state: string) => {
-    const baseStyles = "h-4 w-0.5 ml-8 my-2";
+    const baseStyles = "h-8 w-0.5 ml-8 my-2";
     
     if (state === currentState || 
         (callState.previousState && state === callState.previousState) || 
@@ -57,8 +57,12 @@ const StateMachineVisualization: React.FC<StateMachineVisualizationProps> = ({
 
   return (
     <div className="w-4xl mx-auto my-5 p-5 bg-slate-50 rounded-lg shadow-md gap-5 font-sans">
-      <h2 className="text-center mb-5 text-slate-800 border-b-2 border-slate-200 pb-2.5 font-semibold text-xl">Call Flow Progress</h2>
+      <h2 className="text-left mb-5 text-slate-800 border-b-2 border-slate-200 pb-2.5 font-semibold text-2xl">Call Flow Progress</h2>
       <div className="flex flex-col">
+        <div className="text-slate-800 flex flex-row font-semibold">
+          <div className="w-1/3 text-center">Call Stage</div>
+          <div className="w-2/3 text-center">Available Actions</div>
+        </div>
         <div className="grid grid-col">
           {/* State Flow Diagram */}
           <div className="flex flex-col gap-2 my-6">
@@ -67,37 +71,34 @@ const StateMachineVisualization: React.FC<StateMachineVisualizationProps> = ({
                 <div className="flex items-start gap-3">
                   {/* State node */}
                   <div className={getStateNodeStyles(state)}>
-                    <div className="flex justify-between">
-                      <span className="">{state}</span>
-                      {state === currentState && (
-                        <span className="text-blue-500 text-sm">●</span>
-                      )}
+                    <div className="flex flex-col justify-between">
+                      <div>
+                        <span className="">{state}</span>
+                        {state === currentState && (
+                          <span className="text-blue-500 text-sm">●</span>
+                        )}
+                      </div>
+                      <div className="text-xs text-left my-2">{STATE_DESCRIPTIONS[state]}</div>
                     </div>
                   </div>
                   
                   {/* Context information that appears beside the node */}
                   {isStateActiveOrCompleted(state) && (
-                    <div className="text-base flex-1">
-                      {/* Show state description for completed or current states */}
-                      <div className="bg-white p-2 rounded border border-slate-200 shadow-sm mb-1">
-                        <p className="text-slate-600">{STATE_DESCRIPTIONS[state]}</p>
-                      </div>
-                      
+                    <div className="text-base flex-1 text-left">
                       {/* Show available actions for current state */}
                       {state === currentState && availableActions.length > 0 && (
-                        <div className="flex flex-col gap-1 mt-2">
-                          <span className="font-semibold text-slate-700">Available Actions:</span>
-                          <div className="flex flex-wrap gap-1">
+                        <div className="flex flex-row gap-1 mt-2 text-left">
+                          <div className="flex flex-col gap-1">
                             {availableActions.map((action) => (
-                              <div className="flex flex-row justify-between">
+                              <div className="flex flex-row text-xs text-left">
                                 <button
                                   key={action}
-                                  className="w-48 px-2 py-1 bg-blue-500 text-white border-none rounded cursor-pointer font-medium text-xs transition-colors hover:bg-blue-600 active:bg-blue-700"
+                                  className="w-32 px-2 py-1 bg-blue-500 text-white border-none rounded cursor-pointer text-xs transition-colors hover:bg-blue-600 active:bg-blue-700"
                                   onClick={() => onActionClick && onActionClick(action)}
                                 >
                                   {action}
                                 </button>
-                                <span className="mt-1.5 text-sm text-slate-500 px-1">{ACTION_DESCRIPTIONS[action]}</span>
+                                <span className="mt-1.5 text-xs text-slate-500 px-1">{ACTION_DESCRIPTIONS[action]}</span>
                               </div>
                             ))}
                           </div>

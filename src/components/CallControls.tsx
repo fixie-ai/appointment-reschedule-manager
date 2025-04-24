@@ -29,7 +29,7 @@ const CallControls: React.FC<CallControlsProps> = ({
           <button 
             onClick={onStartCall} 
             disabled={isStartingCall}
-            className={`bg-blue-500 text-white border-none py-3 px-6 rounded-md font-medium cursor-pointer transition-colors hover:bg-blue-600 ${isStartingCall && 'bg-slate-400 cursor-not-allowed hover:bg-slate-400'}`}
+            className={`bg-green-500 text-white border-none py-3 px-6 rounded-md font-medium cursor-pointer transition-colors hover:bg-green-600 ${isStartingCall && 'bg-slate-400 cursor-not-allowed hover:bg-slate-400'}`}
           >
             {isStartingCall ? "Starting Call..." : "Start Call"}
           </button>
