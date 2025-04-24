@@ -10,17 +10,20 @@ export default {
     Offer the following alternative times:
     - {{details.alt_date_1}} at {{details.alt_time_1}}
     - {{details.alt_date_2}} at {{details.alt_time_2}}
-    
-    After offering these alternatives, select "offer_alternatives".
-    
-    NOTE: The only valid action in this state is "offer_alternatives". 
-    You cannot use "cannot_reschedule" or "can_reschedule" or "confirm_reschedule" directly from this state.
+
+    If they say they can make one of the alternative times, select "new_date_confirmed".
+
+    If they cannot make either of the alternative times, select "cancel_appointment".
   `,
   
   actions: {
-    "offer_alternatives": {
-      description: "Offer alternative appointment times",
-      nextState: "reschedule_checking"
+    "new_date_confirmed": {
+      description: "Confirm new appointment date",
+      nextState: "reschedule_confirmed"
+    },
+    "cancel_appointment": {
+      description: "Cancel the appointment",
+      nextState: "appointment_cancelled"
     }
   }
 };

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { UltravoxSessionStatus } from "ultravox-client";
 import { checkDateAvailability } from "./utils/date-checker";
 import { getAvailableActions, initializeStateMachine, transition } from "./stateMachine/stateMachine";
-import { STATES } from "./config";
+import { STATES, ACTION_DESCRIPTIONS } from "./config";
 import { getTemplate } from "./stateMachine/stateMachineBuilder";
 import { getSystemPrompt, getInstructionsFromTemplate } from "./config/systemPrompt";
 import { AppointmentDetails, CallState } from "./config/types";
@@ -28,6 +28,7 @@ const appointmentDetails: AppointmentDetails = {
 };
 
 // Function to create and start a new Ultravox call
+// Note: This should be done server-side in any production deployment
 async function createUltravoxCall(
   details: AppointmentDetails, 
   initialCallState: CallState
@@ -71,8 +72,8 @@ async function createUltravoxCall(
                 location: "PARAMETER_LOCATION_BODY",
                 schema: {
                   type: "string",
-                  enum: ['start_call', 'confirm_identity', 'wrong_number', 'can_attend', 'cannot_attend', 'offer_alternatives', 'can_reschedule', 'cannot_reschedule', 'confirm_reschedule', 'cancel_appointment', 'end_call'],
-                  description: "The action to perform in the current state. IMPORTANT: Only use actions that are valid for the current state. For example, in 'reschedule_offering' state, you can only use 'offer_alternatives'.",
+                  enum: Object.keys(ACTION_DESCRIPTIONS),
+                  description: "The action to perform in the current state. IMPORTANT: Only use actions that are valid for the current state. For example, in 'reschedule_offering' state, you can only use 'new_date_confirmed' or 'cancel_appointment'.",
                 },
               },
               {
@@ -190,7 +191,7 @@ function App() {
           const validActions = getAvailableActions(currentCallState.currentState);
           if (!validActions.includes(params.action)) {
             return `Error: The action "${params.action}" is not valid in the current state "${currentCallState.currentState}". Valid actions are: ${validActions.join(", ")}`;
-          }
+          }          
           
           // Apply the state transition
           const newCallState = transition(

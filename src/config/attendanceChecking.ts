@@ -19,8 +19,8 @@ export default {
   
   actions: {
     "can_attend": {
-      description: "The client can attend the scheduled appointment",
-      nextState: "appointment_confirmed"
+      description: "The client can attend the scheduled appointment. Ending the call.",
+      nextState: "call_ended"
     },
     "cannot_attend": {
       description: "The client cannot attend the scheduled appointment",
