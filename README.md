@@ -22,9 +22,7 @@ The application uses a state machine and provides a visualizer of the states and
 
 ## Additional Configuration
 1. System Prompt → Defined in `src/config/systemPrompt.ts`
-1. Call State → Defined in `src/config/index.ts`
-1. Individual Call State Templates → Defined in `src/config/`. These are used in `index.ts`
-
+1. State Machine Definition → Defined in `src/config/states.ts`
 
 ## Run
 1. Start the app with `pnpm dev`
@@ -37,120 +35,100 @@ The application uses a state machine and provides a visualizer of the states and
 ## Creating a State Machine Agent
 Let's talk about how you can use the state machine approach to create your own Ultravox agent.
 
-### 1. Define Your States
+### 1. Define Your State and Action Enums
+First, define your states and actions as TypeScript enums for type safety and better code organization:
 
-Create a file for each state in your application. Some things to keep in mind:
+```typescript
+// src/config/states.ts
+export enum StateEnum {
+  INITIAL = 'initial',
+  IDENTITY_CHECKING = 'identity_checking',
+  // Add all your states here...
+}
 
-* **Keep States Focused**: Each state should do one thing well.
-* **Clear Templates**: Write templates that clearly explain what should happen in each state.
-* **Logical Transitions**: Ensure your state transitions make sense and form a complete flow.
+export enum ActionEnum {
+  START_CALL = 'start_call',
+  CONFIRM_IDENTITY = 'confirm_identity',
+  // Add all your actions here...
+}
+```
 
-```ts
-// config/myCustomState.ts
-export default {
-  name: "my_custom_state",
-  description: "A description of this state",
-  
-  template: `
-    This template provides instructions for this state.
-    You can use {{details.variable}} syntax to insert data.
-  `,
-  
-  actions: {
-    "action_name": {
-      description: "Description of what this action does",
-      nextState: "next_state_name"
-    },
-    // Add more actions as needed...
+### 2. Create State Definitions
+Define all the prompts and actions for each state:
+
+```typescript
+// src/config/states.ts
+export const states: Record<StateEnum, StateDefinition> = {
+  [StateEnum.INITIAL]: {
+    description: "Preparing to start the call",
+    template: ({ details }) => `
+      This template provides instructions for this state.
+      You can dynamically insert data like: ${details.client_name}
+      
+      To start the call, select "${ActionEnum.START_CALL}".
+    `,
+    actions: {
+      [ActionEnum.START_CALL]: {
+        description: "Initiate the outbound call",
+        nextState: StateEnum.NEXT_STATE
+      }
+    }
+  },
+  // Define all other states...
+};
+```
+
+### 3. Define State Machine Types
+Create proper TypeScript types for your state machine components:
+
+```typescript
+// Type for template function
+export type TemplateFunction = (data: {
+  details: AppointmentDetails;
+  callData: CallData;
+  previousState?: StateEnum | null;
+}) => string;
+
+// Type for state action
+export type StateAction = {
+  description: string;
+  nextState: StateEnum;
+  condition?: (callData: CallData) => boolean;
+  updateData?: (callData: CallData) => Partial<CallData>;
+};
+
+// Generic state type
+export type StateDefinition = {
+  description: string;
+  template: TemplateFunction;
+  actions: Partial<Record<ActionEnum, StateAction>>;
+};
+```
+
+### 4. Initialize and Use the State Machine
+In your app, use the state machine:
+
+```typescript
+// App.tsx or another entry point
+import { getAvailableActions, initializeStateMachine, transition } from "./stateMachine/stateMachine";
+import { StateEnum, ActionEnum } from "./config/states";
+
+// Initialize the state machine
+const initialState = initializeStateMachine();
+setCallState(initialState);
+setAvailableActions(getAvailableActions(StateEnum.INITIAL));
+
+// Handle transitions
+const performAction = (action: string) => {
+  if (availableActions.includes(action)) {
+    const newCallState = transition(
+      currentCallState.currentState, 
+      action,
+      currentCallState.callData
+    );
+    
+    setCallState(newCallState);
+    setAvailableActions(getAvailableActions(newCallState.currentState));
   }
 };
-```
-
-### 2. Export Your States
-
-In `config/index.ts`, import and export all your states:
-
-```ts
-// config/index.ts
-import myCustomState from './myCustomState';
-import anotherState from './anotherState';
-// Import all your state files you created in step 1
-
-// Export state constants
-export const STATES = {
-  MY_CUSTOM_STATE: 'my_custom_state',
-  ANOTHER_STATE: 'another_state',
-  // Add constants for all states
-};
-
-// Export all state definitions
-export const allStates = {
-  [STATES.MY_CUSTOM_STATE]: myCustomState,
-  [STATES.ANOTHER_STATE]: anotherState,
-  // Add all states
-};
-
-// Export state order for visualization (optional)
-export const STATE_ORDER = [
-  STATES.MY_CUSTOM_STATE,
-  STATES.ANOTHER_STATE,
-  // Order your states for visualization
-];
-```
-
-### 3. Initialize the State Machine
-
-In your application code, create the state machine:
-
-```ts
-// App.tsx or another entry point
-import { createStateMachine } from './stateMachine';
-import { allStates, STATES } from './config';
-
-// Create your state machine
-const myStateMachine = createStateMachine({
-  name: "My Application",
-  description: "Description of my application",
-  initialState: STATES.MY_CUSTOM_STATE,
-  states: allStates
-});
-```
-
-### 4. (Optional) Use the State Machine in Your UI
-
-Use the provided hooks to connect the state machine to your UI:
-
-```ts
-// In a React component
-import { useStateMachineWithUltravox } from './hooks/useStateMachineWithUltravox';
-
-function MyComponent() {
-  // Get everything you need from the hook
-  const {
-    callState,
-    availableActions,
-    performAction,
-    // ...other methods and properties
-  } = useStateMachineWithUltravox(
-    myStateMachine,
-    myApplicationData
-  );
-  
-  // Use these in your component
-  return (
-    <div>
-      <p>Current state: {callState.currentState}</p>
-      <div>
-        {availableActions.map(action => (
-          <button 
-            key={action}
-            onClick={() => performAction(action)}
-          >
-            {action}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
 ```
