@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { UltravoxSessionStatus } from "ultravox-client";
 import { checkDateAvailability } from "./utils/date-checker";
 import { getAvailableActions, initializeStateMachine, transition } from "./stateMachine/stateMachine";
-import { STATES, ACTION_DESCRIPTIONS } from "./config";
+import { StateEnum, ACTION_DESCRIPTIONS } from "./config/states";
 import { getTemplate } from "./stateMachine/stateMachineBuilder";
 import { getSystemPrompt, getInstructionsFromTemplate } from "./config/systemPrompt";
 import { AppointmentDetails, CallState } from "./config/types";
@@ -159,7 +159,7 @@ function App() {
   const [callState, setCallState] = useState<CallState>(initializeStateMachine());
   const callStateRef = useRef<CallState>(callState);
   const [availableActions, setAvailableActions] = useState<string[]>(
-    getAvailableActions(STATES.INITIAL)
+    getAvailableActions(StateEnum.INITIAL)
   );
 
   // Update the ref whenever callState changes
@@ -171,7 +171,7 @@ function App() {
   useEffect(() => {
     if (!joinURL) {
       setCallState(initializeStateMachine());
-      setAvailableActions(getAvailableActions(STATES.INITIAL));
+      setAvailableActions(getAvailableActions(StateEnum.INITIAL));
     }
   }, [joinURL]);
 
@@ -244,7 +244,7 @@ function App() {
       // Initialize the state machine
       const initialState = initializeStateMachine();
       setCallState(initialState);
-      setAvailableActions(getAvailableActions(STATES.INITIAL));
+      setAvailableActions(getAvailableActions(StateEnum.INITIAL));
       
       // Create the call
       const joinUrl = await createUltravoxCall(appointmentDetails, initialState);
