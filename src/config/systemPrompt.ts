@@ -1,5 +1,3 @@
-// src/config/systemPrompt.ts
-
 import { AppointmentDetails } from './types';
 
 export function getSystemPrompt(details: AppointmentDetails): string {

@@ -1,3 +1,5 @@
+import { StateEnum } from './states';
+
 // Appointment details that are passed in at call creation
 export interface AppointmentDetails {
   client_name: string;
@@ -12,7 +14,7 @@ export interface AppointmentDetails {
 }
 
 export interface CallData {
-  stateHistory?: string[];
+  stateHistory?: StateEnum[];
   rescheduled_date?: string;
   rescheduled_time?: string;
   confirmed?: boolean;
@@ -23,19 +25,7 @@ export interface CallData {
 }
 
 export interface CallState {
-  previousState?: string | null;
-  currentState: string;
+  previousState?: StateEnum | null;
+  currentState: StateEnum;
   callData: CallData;
 }
-
-export interface StateMachine {
-  [state: string]: {
-    [action: string]: string;
-  };
-}
-
-export type TemplateFunction = (data: {
-  details: AppointmentDetails;
-  callData: CallData;
-  previousState?: string | null;
-}) => string;

@@ -1,12 +1,12 @@
 import React from 'react';
-import { STATE_DESCRIPTIONS, ACTION_DESCRIPTIONS, STATE_ORDER } from '../config';
+import { StateEnum, states, STATE_ORDER, ACTION_DESCRIPTIONS } from '../config/states';
 import { STATE_TRANSITIONS } from '../stateMachine/stateMachineBuilder';
 import { CallState } from '../config/types';
 
 interface StateMachineVisualizationProps {
   callState: CallState;
   availableActions: string[];
-  onActionClick?: (action: string) => void;
+  onActionClick: (action: string) => void;
 }
 
 const StateMachineVisualization: React.FC<StateMachineVisualizationProps> = ({
@@ -15,8 +15,10 @@ const StateMachineVisualization: React.FC<StateMachineVisualizationProps> = ({
   onActionClick
 }) => {
   const { currentState } = callState;
+
+  const getStateDescription = (state: StateEnum) => states[state].description;
   
-  const getStateNodeStyles = (state: string) => {
+  const getStateNodeStyles = (state: StateEnum) => {
     const baseStyles = "p-1 rounded-md w-60 text-lg border-2 transition-all duration-300 px-4";
     
     if (state === currentState) {
@@ -38,7 +40,7 @@ const StateMachineVisualization: React.FC<StateMachineVisualizationProps> = ({
     return `${baseStyles} border-slate-300 bg-slate-50 opacity-60 text-slate-500`;
   };
 
-  const getConnectorStyles = (state: string) => {
+  const getConnectorStyles = (state: StateEnum) => {
     const baseStyles = "h-8 w-0.5 ml-8 my-2";
     
     if (state === currentState || 
@@ -50,7 +52,7 @@ const StateMachineVisualization: React.FC<StateMachineVisualizationProps> = ({
     return `${baseStyles} bg-slate-300`;
   };
 
-  const isStateActiveOrCompleted = (state: string) => {
+  const isStateActiveOrCompleted = (state: StateEnum) => {
     return state === currentState || 
            callState.callData.stateHistory?.includes(state);
   };
@@ -78,7 +80,7 @@ const StateMachineVisualization: React.FC<StateMachineVisualizationProps> = ({
                           <span className="text-blue-500 text-sm">●</span>
                         )}
                       </div>
-                      <div className="text-xs text-left my-2">{STATE_DESCRIPTIONS[state]}</div>
+                      <div className="text-xs text-left my-2">{getStateDescription(state)}</div>
                     </div>
                   </div>
                   
@@ -90,9 +92,8 @@ const StateMachineVisualization: React.FC<StateMachineVisualizationProps> = ({
                         <div className="flex flex-row gap-1 mt-2 text-left">
                           <div className="flex flex-col gap-1">
                             {availableActions.map((action) => (
-                              <div className="flex flex-row text-xs text-left">
+                              <div key={action} className="flex flex-row text-xs text-left">
                                 <button
-                                  key={action}
                                   className="w-32 px-2 py-1 bg-blue-500 text-white border-none rounded cursor-pointer text-xs transition-colors hover:bg-blue-600 active:bg-blue-700"
                                   onClick={() => onActionClick && onActionClick(action)}
                                 >

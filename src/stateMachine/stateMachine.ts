@@ -1,35 +1,49 @@
-import { STATE_MACHINE } from './stateMachineBuilder';
-import { STATES } from '../config';
+import { states, StateEnum, ActionEnum } from '../config/states';
 import { CallState, CallData } from '../config/types';
 
 // Function to transition between states
-export function transition(currentState: string, action: string, callData: CallData): CallState {
-  const nextState = STATE_MACHINE[currentState]?.[action];
+export function transition(currentState: StateEnum, action: string, callData: CallData): CallState {
+  const stateDefinition = states[currentState];
+  const actionDefinition = stateDefinition.actions[action as ActionEnum];
   
-  if (!nextState) {
+  if (!actionDefinition) {
     throw new Error(`Invalid transition: ${action} from state ${currentState}`);
   }
   
-  // Update call data with new state
+  // Check condition if exists
+  if (actionDefinition.condition && !actionDefinition.condition(callData)) {
+    throw new Error(`Transition condition failed: ${action} from state ${currentState}`);
+  }
+  
+  // Update call data if needed
+  let updatedData = { ...callData };
+  if (actionDefinition.updateData) {
+    updatedData = { 
+      ...updatedData, 
+      ...actionDefinition.updateData(updatedData) 
+    };
+  }
+  
+  // Return new state
   return {
     previousState: currentState,
-    currentState: nextState,
+    currentState: actionDefinition.nextState,
     callData: {
-      ...callData,
-      stateHistory: [...(callData.stateHistory || []), currentState]
+      ...updatedData,
+      stateHistory: [...(updatedData.stateHistory || []), currentState]
     }
   };
 }
 
 // Function to get available actions for current state
-export function getAvailableActions(currentState: string): string[] {
-  return Object.keys(STATE_MACHINE[currentState] || {});
+export function getAvailableActions(currentState: StateEnum): string[] {
+  return Object.keys(states[currentState].actions);
 }
 
 // Function to initialize the state machine
 export function initializeStateMachine(): CallState {
   return {
-    currentState: STATES.INITIAL,
+    currentState: StateEnum.INITIAL,
     previousState: null,
     callData: {
       stateHistory: []
